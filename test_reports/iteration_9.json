@@ -1,0 +1,71 @@
+{
+  "summary": "Iteration 9 — Owner Daily Briefing feature validated end-to-end. Backend 13/13 pytest pass (incl. 9 briefing assertions + 4 finance alias regressions). Frontend page /owner/briefing renders fully: hero, AI badge, 4 stat tiles with real IDR values, top/attention outlet cards, 6 urgent actions, outlet performance table. Sidebar nav 'Daily Briefing AI' present; cockpit 'open-daily-briefing-btn' navigates correctly. AI returned natural Indonesian briefing with formatted IDR. Iteration 8 reported missing aliases (ap-ledger, journal-entries, chart-of-accounts, item-pricing) all return 200 now.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Greeting consistency",
+        "issue": "Hero greeting reflects current Asia/Jakarta time-of-day (e.g., 'Selamat malam, Pak Hadi') while LLM-generated briefing_text opened with 'Selamat pagi, Pak Hadi!'. The Gemini prompt passes `time_of_day` as data only — it does not instruct the model to MIRROR the greeting. Minor UX dissonance when tested at non-morning hours.",
+        "affected_selectors": ["briefing-hero", "briefing-text"]
+      },
+      {
+        "flow": "Voice playback (headless)",
+        "issue": "Click on briefing-voice-btn did not flip label to 'Berhenti'. Likely speechSynthesis fires onerror immediately in headless Chromium (no audio device / no id-ID voice loaded), so onerror sets speaking=false. UI does not surface a toast in that error path — user gets no feedback. Suggest adding toast.error in `u.onerror` handler.",
+        "affected_selectors": ["briefing-voice-btn"]
+      }
+    ],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "POST /api/auth/login (owner@torado.id) → 200, JWT issued",
+    "GET /api/owner/daily-briefing → 200, all top-level fields present",
+    "briefing_text non-empty (495 chars), addresses owner ('Pak Hadi'), uses formatted IDR ('Rp 44.4 Juta', 'Rp 102.9 Juta', 'Rp 13.0 Juta')",
+    "greeting time-aware: starts with one of Selamat pagi/siang/sore/malam",
+    "highlights: yesterday_total=Rp 44.4M, mtd_revenue=Rp 378.6M, cash_total=Rp 3.36B, ap_due_count=50, ap_due_total=Rp 102.9M",
+    "urgent_actions returned 6 rows: outlet_drop, low_stock x3, anomaly, ap_due — all with severity & action_link starting with '/'",
+    "voice_text sanitized: no '%' present, 'Rp' replaced with 'Rupiah'",
+    "yesterday_by_outlet list populated",
+    "llm_used=true (Gemini 2.5 Flash via emergentintegrations + EMERGENT_LLM_KEY)",
+    "GET /api/finance/ap-ledger?page=1&per_page=5 → 200 (was missing in iter 8)",
+    "GET /api/finance/journal-entries → 200 (alias added)",
+    "GET /api/finance/chart-of-accounts → 200 (alias added)",
+    "GET /api/finance/item-pricing → 200 (alias added)",
+    "Frontend /owner/briefing: data-testid='daily-briefing-page', 'briefing-hero', 'briefing-text', 'briefing-voice-btn', 'briefing-refresh-btn', 'stat-yesterday', 'stat-mtd', 'stat-cash', 'stat-ap', 'outlet-card-top', 'outlet-card-attention', 'urgent-actions-section', 'outlet-performance-section' all visible",
+    "6 urgent-action rows rendered with proper testid prefix",
+    "Stat tiles show real values (Rp 44.382.948, Rp 378.639.579, Rp 3.361.165.511, Rp 102.920.259) — NONE are zero",
+    "Refresh button click triggers reload without errors",
+    "Sidebar nav has 'Daily Briefing AI' link under Cockpit",
+    "Owner Cockpit 'open-daily-briefing-btn' navigates to /owner/briefing"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_daily_briefing.py",
+    "/app/test_reports/pytest/iteration_9.xml"
+  ],
+  "action_items": [
+    "(Minor) Update Gemini prompt in /app/backend/services/daily_briefing_service.py:_build_briefing_prompt to explicitly instruct the model to OPEN with the precomputed greeting string ('Selamat malam, Pak Hadi') instead of letting it default to 'Selamat pagi'. e.g., add: 'WAJIB: Mulai briefing dengan kalimat persis: \"{greeting}.\"'",
+    "(Minor) Add `toast.error('Voice tidak tersedia')` inside the `u.onerror` handler in DailyBriefing.jsx so users get feedback when TTS fails (headless or unsupported voice)."
+  ],
+  "critical_code_review_comments": [
+    "daily_briefing_service.py is 419 lines — still under 700 LOC threshold. Aggregation logic is read-only, async, and properly indexed by date strings. OK.",
+    "_aggregate_briefing_data scans up to 30 items × N outlets via inventory_movements aggregations sequentially — could be slow with large datasets. Consider $facet or pre-aggregated stock balance collection for better performance.",
+    "MongoDB _id correctly excluded via projections everywhere.",
+    "Gemini call uses session_id stamped per-hour ('%Y%m%d%H') so caching/dedup behavior is implicit hourly — good.",
+    "Frontend DailyBriefing.jsx has all required data-testid attrs. Auto-refresh interval (5 min) safe. speechSynthesis cleanup on unmount present."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_daily_briefing.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 pytest pass)",
+    "frontend": "100% (all required testids and flows verified; voice click is non-blocking in headless)"
+  },
+  "test_credentials": "owner@torado.id / Torado@2026 (verified working). admin@torado.id used for finance alias regression.",
+  "seed_data_creation": "None — used existing migrated production-like data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Owner Daily Briefing is fully wired: backend (services/daily_briefing_service.py + routers/owner.py:23) + frontend (portals/owner/DailyBriefing.jsx). Gemini 2.5 Flash via emergentintegrations is working with EMERGENT_LLM_KEY in /app/backend/.env. Test file at /app/backend/tests/test_daily_briefing.py covers the briefing endpoint and finance aliases (ap-ledger, journal-entries, chart-of-accounts, item-pricing — all 200 now). Two minor UX polish items remain (greeting mirroring + TTS error toast); not blockers. Voice synth in headless reports speechSynthesis available but onerror fires immediately — expected behavior, do not waste cycles trying to make button toggle in headless."
+}

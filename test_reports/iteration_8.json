@@ -1,0 +1,67 @@
+{
+  "summary": "Validated 4-phase Torado migration. 18/19 backend pytest cases pass (1 skipped: /api/finance/ap-ledger endpoint not implemented). All migrated data is reachable via correct endpoints. Frontend dashboards render with real data on all migrated routes except /master/items (frontend route missing).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/finance/ap-ledger", "issue": "Endpoint not implemented (404). Data exists in 'ap_ledger' collection (832 docs) and ap_invoices mirror (348). UI/API consumers cannot list AP ledger entries directly. Recommend adding GET /api/finance/ap-ledger -> list with vendor names + amounts."},
+      {"endpoint": "/api/finance/journal-entries", "issue": "Returns 404. Canonical path is /api/finance/journals. Update review-request docs or add an alias."},
+      {"endpoint": "/api/finance/item-pricing", "issue": "Returns 404. Actual mount is /api/inventory/items/pricing/list (router prefix /api/inventory/items). Consider adding /api/finance/item-pricing alias for consistency with Finance module."},
+      {"endpoint": "/api/finance/chart-of-accounts", "issue": "Returns 404. Actual path is /api/master/chart-of-accounts (166 entries verified)."},
+      {"endpoint": "/api/master/vendors & /api/master/items", "issue": "?limit=N query parameter ignored — server enforces per_page=20. Use page/per_page params. meta.total reports correct counts (52 vendors, 1792 items)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "MasterItemsPage", "issue": "/master/items renders 404 'Halaman tidak ditemukan'. Likely route mounted under /admin/master/items per sidebar. Either fix route or add redirect.", "selector": "/master/items", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "/procurement/kanban", "issue": "Page renders but two 503 responses observed in console (some workboard sub-call failing intermittently). Workboard list cards still appear.", "affected_selectors": ["/procurement/kanban"]}
+    ],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "Auth: login admin@torado.id returns valid JWT (data.access_token, user.email, default_portal=admin)",
+    "Master items: 1792 total (meta.total)",
+    "Master vendors: 52 total",
+    "Master chart-of-accounts: 166 total",
+    "Finance payment-requests: list returned",
+    "Item pricing list: rows returned (Phase 2 multi-period verified)",
+    "AP aging: rows + buckets present, grand_total = Rp 1,280,244,146.10 (>1 Miliar)",
+    "Cash position: net_liquid_cash = Rp 3,361,165,511 (bank=9 accts, petty_cash=1 acct)",
+    "Journals (/api/finance/journals): rows returned",
+    "Executive KPIs: sales_mtd > 0 (Rp 184,008,223 May 2026)",
+    "Executive sales-trend?days=30: 30 daily points with non-zero totals (avg Rp 35.7M)",
+    "Executive brand-mix: 5 brands ALT/DLS/CAL/RKP/BKK with share_pct (period 2026-05)",
+    "Owner cockpit: digest fields present",
+    "Inventory low-stock: items returned",
+    "Inventory movements: rows returned",
+    "Anomalies: rows returned",
+    "Procurement workboard: kanban payload returned",
+    "AI generate-journal-entry: 200 OK (Gemini integration via EMERGENT_LLM_KEY working)",
+    "Frontend login flow → /portal-select with 8 portal cards",
+    "Frontend renders OK: /executive, /owner/cockpit, /finance/ap-aging, /finance/cash, /procurement/kanban, /inventory/low-stock, /finance/payment-requests, /admin/integrations"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_torado_migration.py",
+    "/app/test_reports/pytest/iteration_8.xml"
+  ],
+  "action_items": [
+    "Add GET /api/finance/ap-ledger endpoint (or document the canonical AP ledger list endpoint)",
+    "Fix frontend route /master/items (404). Either add route or update navigation links to /admin/master/items.",
+    "Investigate intermittent 503s on /procurement/kanban sub-calls",
+    "Optional: add aliases /api/finance/journal-entries, /api/finance/item-pricing, /api/finance/chart-of-accounts so paths match docs/UI expectations",
+    "Master list endpoints respect ?limit – currently capped at per_page=20"
+  ],
+  "critical_code_review_comments": [
+    "Migrated data is intact and accessible; total counts match user's targets (vendors=52, items=1792, CoA=166, AP grand_total=1.28B IDR, Cash=3.36B IDR, sales_mtd=184M IDR).",
+    "Response envelope {success,data,errors,meta} is consistent across endpoints — good. But AP-ledger missing endpoint creates a UX gap.",
+    "Frontend /master/items 404 is a regression risk; route table should be audited."
+  ],
+  "updated_files": ["/app/backend/tests/test_torado_migration.py"],
+  "success_rate": {"backend": "94.7% (18/19, 1 documented skip)", "frontend": "88% (8/9 routes render OK; 1 route missing)"},
+  "test_credentials": "admin@torado.id / Torado@2026 (verified working)",
+  "seed_data_creation": "None (used existing migrated data only)",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend response envelope is {success, data, errors, meta}. Use unwrap helper. Master list endpoints cap per_page=20 but meta.total has the real count. Phase-1 PR endpoint = /api/finance/payment-requests. Phase-2 item pricing = /api/inventory/items/pricing/list (NOT /api/finance/item-pricing). Journals = /api/finance/journals. CoA = /api/master/chart-of-accounts. AP-ledger has NO list endpoint — only ap-aging aggregates and per-vendor rows."
+}

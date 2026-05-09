@@ -1,0 +1,218 @@
+/**
+ * CMS News & Events — Sprint G Admin CMS
+ */
+import { useState, useEffect } from "react";
+import { Plus, Edit2, Trash2, Newspaper, Eye, EyeOff, Loader2, CalendarDays } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import api from "@/lib/api";
+
+const CATEGORIES = ["Opening", "Events", "Award", "Story", "Announcement", "Promo"];
+
+const EMPTY_FORM = {
+  title: "", excerpt: "", content: "", date: new Date().toISOString().slice(0,10),
+  category: "Announcement", brand_id: "", image: "", status: "draft",
+};
+
+export default function CMSNews() {
+  const [items, setItems] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [nR, bR] = await Promise.all([
+        api.get("/admin/cms/news"),
+        api.get("/admin/cms/brands"),
+      ]);
+      setItems(nR.data?.data || []);
+      setBrands(bR.data?.data || []);
+    } catch { toast.error("Gagal memuat data"); } finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setFormOpen(true); };
+  const openEdit = (item) => { setEditing(item.id); setForm({ ...item, brand_id: item.brand_id || "" }); setFormOpen(true); };
+
+  const handleSave = async () => {
+    if (!form.title.trim()) { toast.error("Judul wajib diisi"); return; }
+    setSaving(true);
+    try {
+      const payload = { ...form, brand_id: form.brand_id || null };
+      if (editing) {
+        await api.put(`/admin/cms/news/${editing}`, payload);
+        toast.success("Artikel diperbarui");
+      } else {
+        await api.post("/admin/cms/news", payload);
+        toast.success("Artikel dibuat");
+      }
+      setFormOpen(false);
+      await load();
+    } catch (e) {
+      toast.error(e.response?.data?.errors?.[0]?.message || "Gagal menyimpan");
+    } finally { setSaving(false); }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/admin/cms/news/${deleteId}`);
+      toast.success("Artikel dihapus");
+      setDeleteId(null);
+      await load();
+    } catch { toast.error("Gagal menghapus"); }
+  };
+
+  const getBrandName = (id) => brands.find(b => b.id === id)?.name || "";
+
+  return (
+    <div className="space-y-4" data-testid="cms-news-page">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-xl font-bold">News & Events</h3>
+          <p className="text-sm text-muted-foreground">Kelola artikel, berita, dan event untuk website compro.</p>
+        </div>
+        <Button onClick={openCreate} data-testid="create-news-btn">
+          <Plus className="h-4 w-4 mr-2" /> Tambah Artikel
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin" /></div>
+      ) : items.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground">
+          <Newspaper className="h-12 w-12 mx-auto mb-3 opacity-30" />
+          <p>Belum ada artikel.</p>
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          {items.map(item => (
+            <div key={item.id} className="border rounded-xl p-4 flex gap-4 bg-white hover:shadow-md transition-shadow"
+                 data-testid={`news-row-${item.id}`}>
+              {item.image && (
+                <img src={item.image} alt={item.title} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold line-clamp-1">{item.title}</span>
+                  <Badge className="text-xs">{item.category}</Badge>
+                  {item.brand_id && <Badge variant="outline" className="text-xs">{getBrandName(item.brand_id)}</Badge>}
+                  <Badge variant={item.status === "published" ? "default" : "secondary"} className="text-xs">
+                    {item.status === "published" ? "Published" : "Draft"}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{item.excerpt}</p>
+                <p className="text-xs text-muted-foreground mt-1">{item.date}</p>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <Button size="icon" variant="ghost" onClick={() => openEdit(item)}>
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDeleteId(item.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" data-testid="news-form-dialog">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Artikel" : "Tambah Artikel"}</DialogTitle>
+            <DialogDescription>Konten tampil di halaman News & Events website compro.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Judul *</Label>
+              <Input value={form.title} onChange={e => setForm(f=>({...f,title:e.target.value}))} data-testid="news-title" />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label>Tanggal</Label>
+                <Input type="date" value={form.date} onChange={e => setForm(f=>({...f,date:e.target.value}))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Kategori</Label>
+                <Select value={form.category} onValueChange={v => setForm(f=>({...f,category:v}))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Brand (opsional)</Label>
+                <Select value={form.brand_id || "none"} onValueChange={v => setForm(f=>({...f,brand_id:v==="none"?"": v}))}>
+                  <SelectTrigger><SelectValue placeholder="— None —" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— None —</SelectItem>
+                    {brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Excerpt</Label>
+              <Textarea rows={2} value={form.excerpt} onChange={e => setForm(f=>({...f,excerpt:e.target.value}))} placeholder="Ringkasan singkat artikel..." />
+            </div>
+            <div className="space-y-1">
+              <Label>Konten Lengkap</Label>
+              <Textarea rows={6} value={form.content} onChange={e => setForm(f=>({...f,content:e.target.value}))} placeholder="Isi artikel..." />
+            </div>
+            <div className="space-y-1">
+              <Label>Image URL</Label>
+              <Input value={form.image} onChange={e => setForm(f=>({...f,image:e.target.value}))} placeholder="https://..." />
+              {form.image && <img src={form.image} alt="" className="rounded-lg h-32 object-cover w-full mt-1" onError={e=>e.target.style.display='none'} />}
+            </div>
+            <div className="flex items-center gap-3">
+              <Label>Status</Label>
+              <Switch checked={form.status === "published"}
+                      onCheckedChange={v => setForm(f=>({...f,status:v?"published":"draft"}))} />
+              <span className="text-sm">{form.status === "published" ? "Published" : "Draft"}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setFormOpen(false)}>Batal</Button>
+            <Button onClick={handleSave} disabled={saving} data-testid="save-news">
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Artikel?</AlertDialogTitle>
+            <AlertDialogDescription>Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">Hapus</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
