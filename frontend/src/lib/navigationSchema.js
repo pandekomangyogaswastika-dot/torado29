@@ -56,6 +56,7 @@ import {
   LineChart,
   PiggyBank,
   QrCode,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export const NAVIGATION_SCHEMA = {
@@ -281,6 +282,72 @@ export const NAVIGATION_SCHEMA = {
         icon: BookOpen,
         items: [
           { id: "coa", name: "Chart of Accounts", path: "/finance/coa" },
+        ],
+      },
+    ],
+  },
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // REPORTS PORTAL
+  // ────────────────────────────────────────────────────────────────────────────
+  reports: {
+    id: "reports",
+    name: "Reports Portal",
+    sections: [
+      {
+        id: "catalog",
+        name: "Reports Catalog",
+        icon: LayoutDashboard,
+        items: [
+          { id: "catalog", name: "All Reports", path: "/reports" },
+        ],
+      },
+      {
+        id: "sales-outlet",
+        name: "Sales & Outlet",
+        icon: TrendingUp,
+        items: [
+          { id: "daily-sales", name: "Daily Sales Summary", path: "/reports/daily-sales" },
+          { id: "outlet-performance", name: "Outlet Performance", path: "/reports/outlet-performance" },
+          { id: "fdo-history", name: "FDO History", path: "/reports/fdo-history" },
+        ],
+      },
+      {
+        id: "inventory-reports",
+        name: "Inventory",
+        icon: Package,
+        items: [
+          { id: "stock-balance", name: "Stock Balance", path: "/reports/stock-balance", badge: "Soon" },
+          { id: "stock-movement", name: "Stock Movement", path: "/reports/stock-movement", badge: "Soon" },
+          { id: "inventory-valuation", name: "Inventory Valuation", path: "/reports/inventory-valuation", badge: "Soon" },
+        ],
+      },
+      {
+        id: "procurement-reports",
+        name: "Procurement",
+        icon: ShoppingCart,
+        items: [
+          { id: "po-summary", name: "PO Summary", path: "/reports/po-summary", badge: "Soon" },
+          { id: "gr-summary", name: "GR Summary", path: "/reports/gr-summary", badge: "Soon" },
+          { id: "vendor-perf", name: "Vendor Performance", path: "/reports/vendor-performance", badge: "Soon" },
+        ],
+      },
+      {
+        id: "finance-reports",
+        name: "Finance",
+        icon: DollarSign,
+        items: [
+          { id: "journal-ledger", name: "Journal Ledger", path: "/reports/journal-ledger", badge: "Soon" },
+          { id: "trial-balance-xl", name: "Trial Balance Excel", path: "/reports/trial-balance-excel", badge: "Soon" },
+          { id: "ap-aging-xl", name: "AP Aging Excel", path: "/reports/ap-aging-excel", badge: "Soon" },
+        ],
+      },
+      {
+        id: "custom-builder",
+        name: "Custom Builder",
+        icon: FileText,
+        items: [
+          { id: "report-builder", name: "Report Builder", path: "/finance/report-builder" },
         ],
       },
     ],

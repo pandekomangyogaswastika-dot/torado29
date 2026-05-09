@@ -8,13 +8,20 @@ Endpoints:
 - GET  /api/reports/pivot                         — 2D matrix
 - GET  /api/reports/comparatives                  — MoM/YoY metric comparison
 - CRUD /api/reports/saved                         — saved report definitions
+
+Excel Exports (Phase 4.1):
+- GET  /api/reports/sales/daily-sales.xlsx        — Daily Sales Summary Excel
+- GET  /api/reports/outlet/performance.xlsx       — Outlet Performance Excel
+- GET  /api/reports/outlet/fdo-history.xlsx       — FDO History Excel
 """
 from typing import Optional
 from fastapi import APIRouter, Body, Depends, Query
+from fastapi.responses import Response
 
 from core.exceptions import ok_envelope
 from core.security import current_user, require_any_perm, require_perm
 from services import reports_service
+from services.excel_export_service import workbook_to_bytes
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -155,3 +162,90 @@ async def update_saved(saved_id: str, payload: dict = Body(...),
 async def delete_saved(saved_id: str,
                         user: dict = Depends(require_any_perm(*_REPORT_READ_PERMS))):
     return ok_envelope(await reports_service.delete_saved(saved_id, user_id=user["id"]))
+
+
+# ============================================================
+# EXCEL EXPORTS (Phase 4.1 — Sales & Outlet Reports)
+# ============================================================
+
+@router.get("/sales/daily-sales.xlsx")
+async def daily_sales_excel(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    outlet_ids: Optional[str] = None,
+    brand_ids: Optional[str] = None,
+    user: dict = Depends(require_any_perm(*_REPORT_READ_PERMS)),
+):
+    """Generate Daily Sales Summary Excel report."""
+    o_ids = [s.strip() for s in outlet_ids.split(",") if s.strip()] if outlet_ids else None
+    b_ids = [s.strip() for s in brand_ids.split(",") if s.strip()] if brand_ids else None
+    
+    wb = await reports_service.generate_daily_sales_excel(
+        date_from=date_from,
+        date_to=date_to,
+        outlet_ids=o_ids,
+        brand_ids=b_ids,
+    )
+    
+    file_bytes = workbook_to_bytes(wb)
+    filename = f"daily_sales_{date_from or 'all'}_{date_to or 'all'}.xlsx"
+    
+    return Response(
+        content=file_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/outlet/performance.xlsx")
+async def outlet_performance_excel(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    outlet_ids: Optional[str] = None,
+    user: dict = Depends(require_any_perm(*_REPORT_READ_PERMS)),
+):
+    """Generate Outlet Performance Excel report."""
+    o_ids = [s.strip() for s in outlet_ids.split(",") if s.strip()] if outlet_ids else None
+    
+    wb = await reports_service.generate_outlet_performance_excel(
+        date_from=date_from,
+        date_to=date_to,
+        outlet_ids=o_ids,
+    )
+    
+    file_bytes = workbook_to_bytes(wb)
+    filename = f"outlet_performance_{date_from or 'all'}_{date_to or 'all'}.xlsx"
+    
+    return Response(
+        content=file_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/outlet/fdo-history.xlsx")
+async def fdo_history_excel(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    outlet_ids: Optional[str] = None,
+    status: Optional[str] = None,
+    user: dict = Depends(require_any_perm(*_REPORT_READ_PERMS)),
+):
+    """Generate FDO History Excel report."""
+    o_ids = [s.strip() for s in outlet_ids.split(",") if s.strip()] if outlet_ids else None
+    
+    wb = await reports_service.generate_fdo_history_excel(
+        date_from=date_from,
+        date_to=date_to,
+        outlet_ids=o_ids,
+        status=status,
+    )
+    
+    file_bytes = workbook_to_bytes(wb)
+    filename = f"fdo_history_{date_from or 'all'}_{date_to or 'all'}.xlsx"
+    
+    return Response(
+        content=file_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

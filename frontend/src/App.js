@@ -44,6 +44,7 @@ const OutletPortal = lazy(() => import("@/portals/OutletPortal"));
 const OwnerPortal = lazy(() => import("@/portals/OwnerPortal"));
 const ProcurementPortal = lazy(() => import("@/portals/ProcurementPortal"));
 const AdminPortal = lazy(() => import("@/portals/admin/AdminPortal"));
+const ReportsPortal = lazy(() => import("@/portals/ReportsPortal"));
 
 // Public Compro Pages — lazy loaded (heavy, not critical path)
 const PublicLayout = lazy(() => import("@/pages/public/PublicLayout"));
@@ -212,6 +213,14 @@ export default function App() {
                       element={
                         <ErrorBoundary scope="Finance Portal">
                           <FinancePortal />
+                        </ErrorBoundary>
+                      }
+                    />
+                    <Route
+                      path="/reports/*"
+                      element={
+                        <ErrorBoundary scope="Reports Portal">
+                          <ReportsPortal />
                         </ErrorBoundary>
                       }
                     />

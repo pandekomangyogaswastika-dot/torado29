@@ -1,6 +1,8 @@
-# Smart Procurement + Market List Integration — Plan (POC → V1 → Hardening)
+# Smart Procurement (Phase 2) + Report Builder & Excel Export (Phase 2 Items 2–3) — Plan
 
 ## 1) Objectives
+
+### A. Smart Procurement (Market List + Vendor Catalog + FDO + Smart PO)
 - Implement **Market List** as **quarterly reference price** (benchmark) used in KDO/BDO/FDO item request UX.
 - Implement **Vendor Item Catalog** as **actual vendor price** source, **auto-updated** from **PO creation** and **GR posting**, with **price history**.
 - Add **FDO (Floor Daily Order)** module aligned with KDO/BDO flow.
@@ -9,7 +11,17 @@
 - Provide **Excel export** matching Torado Market List format exactly.
 - Add **Price Intelligence Dashboard** (reference vs actual, trends, deviations).
 
-**Status update (May 2026):** Smart Procurement Phase 2 is **complete** and **tested 100%** (Market List, FDO, Vendor Catalog+hooks, Price Intelligence, Smart PO unavailability flow, ItemAutocomplete integration, Excel export).
+**Status update (May 2026):** Smart Procurement Phase 2 is **complete** and **tested 100%** (Market List, FDO, Vendor Catalog+hooks, Price Intelligence, Smart PO unavailability flow, ItemAutocomplete integration, Excel export). See `/app/test_reports/iteration_10.json`.
+
+### B. Universal Report Catalog + Excel Export (legacy-friendly, configurable)
+- Provide a **Universal Report Catalog** covering **Outlet/Sales, Inventory, Procurement, Finance** reporting.
+- Provide **Excel export (.xlsx)** that is:
+  - **Legacy-friendly** (Excel 2010+ compatible)
+  - **Template-driven/configurable** (column selection, headers/footers, number formats, grouping/subtotal rules)
+- Provide **advanced filters** (date range + multi-select outlet/brand/vendor/category/status as applicable).
+- Reuse existing **Report Builder (lite)** where suitable and extend it with Excel export.
+
+**Status update (May 2026):** Phase 4.1 (Sales & Outlet Reports) is **complete** and **tested** (backend Excel utilities + 3 export endpoints + Reports Portal UI). Ready to proceed to Phase 4.2.
 
 ---
 
@@ -25,74 +37,11 @@
 4. As procurement staff, when I create a PO, the system auto-updates the vendor’s item catalog and tracks price changes.
 5. As receiving staff, when I post GR, the **actual unit cost** updates vendor price and writes to price history.
 
-**POC steps**
-- Data model POC (backend only):
-  - Create collections + minimal schemas:
-    - `market_list_quarters` (active quarter)
-    - `market_list_prices` (item_id + quarter_id + unit + ref_price)
-    - `vendor_items` (vendor_id + item_id + unit + current_price + availability)
-    - `vendor_item_price_history` (vendor_id + item_id + unit + old/new + source)
-  - Extend `items` with: `ml_status` (active|pending_review), `created_from` (manual|kdo|bdo|fdo), `brand_availability` (optional), enforce **category required on approve**.
-- POC services + hooks:
-  - Market List: `get_active_quarter()`, `get_ref_price(item_id, quarter)`, `set_ref_price()`.
-  - Vendor Catalog: `upsert_vendor_item_from_po()`, `upsert_vendor_item_from_gr()` with history write.
-  - Add hooks in:
-    - `procurement_service.create_po` (after insert) → update `vendor_items` (source=`po`)
-    - `procurement_service.post_gr` (after GR post) → update `vendor_items` (source=`gr`)
-- POC endpoints (minimal):
-  - (Evolved into) `GET /api/market-list/*`, `GET /api/vendor-items/*`, `POST /api/outlet/fdo`.
-- POC script (isolated, python) to validate:
-  - Create quarter → resolve new item from KDO → approve w/ category → set ref price → create PO → post GR → verify vendor_items updated + history.
-
-**Checkpoint:** proceed only if POC script passes reliably.
-
 ✅ **Status:** Completed (superseded by fully integrated V1 implementation).
 
 ---
 
 ### Phase 2 — V1 App Development (wire into portals)
-
-**User stories (V1)**
-1. As outlet staff, I can create **FDO** requests identical to KDO/BDO with autocomplete + reference price.
-2. As procurement staff, when creating PO I see **suggested vendor context** per item based on vendor catalog price, plus market reference.
-3. As procurement staff, if a vendor can’t supply an item, I can choose: **redirect to alt vendor (split)**, **urgent purchase**, or **return to PR pool**.
-4. As procurement manager, I can manage quarterly Market List prices and **export Excel** identical to legacy.
-5. As procurement manager, I can view **vendor vs market** comparisons and price trend signals.
-
-**Backend (V1)**
-- Implement routers/services:
-  - `market_list_router`: quarter CRUD, reference price CRUD, pending items approval, export endpoint.
-  - `vendor_items_router`: list vendor items, mark unavailable/available, price history.
-  - `fdo` endpoints implemented via existing KDO/BDO service wrapper.
-- Implement approval gate:
-  - Permission: `procurement.market_list.manage` for quarter/price/approval operations.
-  - Validation: approved item must have `category_id`.
-- Hooks:
-  - `create_po` → upsert vendor_items + price_history (source=`po`, best-effort)
-  - `post_gr` → upsert vendor_items + price_history (source=`gr`, best-effort; GR treated as most accurate)
-
-**Frontend (V1)**
-- FDO pages:
-  - Add `FdoPage.jsx` under Outlet portal.
-  - Item search displays Market List ref price hint.
-- Market List UI:
-  - `MarketListPage.jsx` with quarter selector, variance display, pending approval modal, set ref price modal.
-  - Export Excel action.
-- Procurement Smart Procurement UI:
-  - `VendorCatalog.jsx` to view vendor catalog + price history + compare vs ref.
-  - `PriceIntelligence.jsx` dashboard.
-- PO Form enhancements:
-  - Show Market List ref price on selected items.
-  - Vendor availability status awareness.
-  - Unavailability actions + alt vendor selection (marks line for split).
-- KDO/BDO integration:
-  - `ItemAutocomplete` enhanced to optionally show Market List ref price (enabled in KDO/BDO list).
-
-**Excel export (V1)**
-- Endpoint: `GET /api/market-list/export.xlsx?year=YYYY`
-- Generates Torado template with quarterly columns and formatting rules.
-
-**End of Phase 2:** run one E2E test pass (seed → create FDO → create PO → post GR → check vendor catalog + export).
 
 ✅ **Status:** Completed (implemented + compiled + tested 100% per `/app/test_reports/iteration_10.json`).
 
@@ -100,20 +49,9 @@
 
 ### Phase 3 — Price Intelligence + Hardening
 
-**User stories (Phase 3)**
-1. As procurement manager, I can see a dashboard of items where vendor price deviates most from market reference.
-2. As procurement manager, I can see price trend history per vendor-item.
-3. As procurement staff, I get a clear warning when selecting a vendor priced above reference.
-4. As procurement manager, I can identify items with **single-source vendor risk**.
-5. As finance/procurement, I can audit why vendor price changed (PO/GR/manual) via history logs.
+✅ **Status:** Dashboard implemented and working. Hardening items remain as optional next.
 
-**Dashboard**
-- `PriceIntelligence` implemented:
-  - Top deviations (actual vs reference)
-  - Single-source risk list
-  - Summary stats
-
-**Hardening (next hardening increments)**
+**Hardening (optional next increments)**
 - Idempotency/safety:
   - Avoid double history entries on repeated PO/GR posts (detect same vendor_item_id + price + effective_date + source_doc_no).
 - Performance:
@@ -122,24 +60,105 @@
   - Ensure category enforcement on approval and on any procurement-side creation.
   - Validate Market List quarter overlaps and one-active-quarter rule.
 
-✅ **Status:** Dashboard implemented and working. Hardening items remain as optional next.
+---
+
+### Phase 4 — Report Catalog + Excel Export (Legacy-Friendly)
+
+> Scope: Implement universal reporting entry point + Excel export that can be configured, starting with Sales/Outlet operational reports.
+
+#### Phase 4.1 — Sales & Outlet Reports (P0) **✅ COMPLETED & TESTED**
+**Goal:** Implement Excel export untuk operational reports paling sering digunakan.
+
+**Delivered Reports**
+1. **Daily Sales Summary Report (Excel)**
+   - Filters: date range, outlet, brand
+   - Columns: date, outlet, brand, grand_total, transaction_count, status
+   - Output: `.xlsx` styled report
+
+2. **Outlet Performance Report (Excel)**
+   - Filters: date range, outlet selection
+   - Columns: outlet, total_sales, days_active, avg_daily_sales, transaction_count
+   - Output: `.xlsx` + **bar chart** (Total Sales by Outlet)
+
+3. **FDO History Report (Excel)**
+   - Filters: date range, outlet, status
+   - Columns: doc_no, request_date, outlet, items_count, status, approved_by, approved_at
+   - Output: `.xlsx` with **status color coding**
+
+**Backend (Phase 4.1) — Implemented**
+- Added reusable Excel export utilities:
+  - `backend/services/excel_export_service.py`
+    - workbook creation, branded headers, styles, number formats, freeze panes, autosize columns
+    - bar chart helper
+- Added 3 Excel export endpoints (auth-gated via `_REPORT_READ_PERMS`):
+  - `GET /api/reports/sales/daily-sales.xlsx`
+  - `GET /api/reports/outlet/performance.xlsx`
+  - `GET /api/reports/outlet/fdo-history.xlsx`
+- Added service generators in `backend/services/reports_service.py`:
+  - `generate_daily_sales_excel()`
+  - `generate_outlet_performance_excel()`
+  - `generate_fdo_history_excel()`
+
+**Frontend (Phase 4.1) — Implemented**
+- New Reports Portal + pages:
+  - `frontend/src/portals/ReportsPortal.jsx`
+  - `frontend/src/portals/reports/ReportsCatalog.jsx`
+  - `frontend/src/portals/reports/DailySalesReport.jsx`
+  - `frontend/src/portals/reports/OutletPerformanceReport.jsx`
+  - `frontend/src/portals/reports/FdoHistoryReport.jsx`
+- Navigation integration:
+  - Added new `reports` portal to `frontend/src/lib/navigationSchema.js`
+- Routing integration:
+  - Added `/reports/*` route in `frontend/src/App.js`
+
+**Testing (Phase 4.1) — Completed**
+- All 3 endpoints verified via `curl` → **HTTP 200** and correct Excel Content-Type.
+- Excel downloads produced valid `.xlsx` files.
+- Reports Catalog UI verified renders correctly.
+
+#### Phase 4.2 — Inventory Reports (P0) **[NOT STARTED / NEXT]**
+- Stock Balance (Excel)
+- Stock Movement (Excel)
+- Inventory Valuation (Excel)
+
+#### Phase 4.3 — Procurement Reports (P1) **[NOT STARTED]**
+- PO Summary (Excel)
+- GR Summary (Excel)
+- Vendor Performance (Excel) — leverage existing vendor scorecard + Excel formatting
+
+#### Phase 4.4 — Finance Reports (P1) **[NOT STARTED]**
+- Journal Ledger (Excel)
+- Trial Balance (Excel)
+- AP Aging (Excel)
+
+#### Phase 4.5 — Enhanced Universal Builder (P2) **[NOT STARTED]**
+- Add Excel export to existing `frontend/src/portals/finance/ReportBuilder.jsx`
+- Saved column templates (selectable)
+- Scheduling integration (optional) via existing `report_schedules` module
 
 ---
 
 ## 3) Next Actions (immediate)
-1. **Seed realistic demo data**:
-   - More items + categories + vendors.
-   - Create sample PO + post GR to populate vendor catalog and demonstrate price history + deviations.
-2. **Demo the unavailability workflow** with real catalog data:
-   - Mark vendor-item unavailable → show alt vendor suggestion → show split marker in PO.
-3. Start next roadmap items (from the original approved Phase 2 backlog):
-   - **Report Builder + Export Excel** (legacy-friendly)
-   - **Custom Profit & Loss format Torado**
-4. Optional: confirm the exact legacy Market List Excel template headers/formatting for strict parity regression testing (byte/structure checks).
+
+### Completed
+1. ✅ Smart Procurement Phase 2 is completed & tested.
+2. ✅ Phase 4.1 Sales & Outlet Excel exports are completed & tested.
+
+### Next (pick next milestone)
+1. Start **Phase 4.2 Inventory Reports (P0)**
+   - Decide exact columns/filters per report (stock balance, movement, valuation)
+   - Implement endpoints + Excel generator functions using `excel_export_service.py`
+   - Add UI pages under Reports Portal
+2. Or start **Phase 2 Item 3**: **Custom Profit & Loss format Torado** (P0)
+3. Optional hardening:
+   - Add minimal automated smoke tests for the new `/api/reports/*xlsx` endpoints
+   - Improve Excel branding parity (logo/header blocks) once template is finalized
 
 ---
 
 ## 4) Success Criteria
+
+### Smart Procurement (already met)
 - KDO/BDO/FDO item input always resolves to an item: existing or **auto-created pending_review**.
 - Pending items cannot become active without **category_id** and procurement approval.
 - Market List reference price is quarter-based and visible in request UIs.
@@ -148,4 +167,10 @@
 - Excel export matches Torado Market List format closely enough to replace the legacy file in day-to-day use.
 - Price Intelligence dashboard surfaces meaningful deviations and trends with acceptable performance.
 
-**Status:** All success criteria for Smart Procurement Phase 2 are met and verified by automated + manual UI testing.
+### Report Catalog + Excel Export (updated)
+- ✅ Phase 4.1 Sales/Outlet report catalog and Excel exports are stable, styled, and open cleanly in Excel (2010+).
+- Next:
+  - Inventory/Procurement/Finance exports implemented with consistent template utilities.
+  - Filters are correct and reproducible (saved configs optional later).
+  - Template config is maintainable (code-first then DB-backed).
+  - Add automated smoke tests for critical export endpoints + basic UI download interaction.

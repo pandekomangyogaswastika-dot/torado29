@@ -1,22 +1,42 @@
 [
   {
-    "content": "Review existing codebase (models, services, routers patterns)",
+    "content": "Create backend excel_export_service.py dengan core utilities (workbook, styles, formatting)",
     "status": "completed"
   },
   {
-    "content": "Phase A: Backend Foundation - Models, Services, Routers (Market List, Vendor Items, FDO, PO/GR hooks)",
+    "content": "Implement Daily Sales Summary Excel export endpoint + service logic",
     "status": "completed"
   },
   {
-    "content": "Phase B: Core UI - Market List page, Vendor Catalog tab, FDO frontend, Navigation",
+    "content": "Implement Outlet Performance Excel export endpoint + service logic",
     "status": "completed"
   },
   {
-    "content": "Phase C: Intelligence Layer - Smart PO (unavailability flow), KDO/BDO/FDO integration, Price Intelligence",
+    "content": "Implement FDO History Excel export endpoint + service logic",
     "status": "completed"
   },
   {
-    "content": "End-to-end testing of all Smart Procurement features",
+    "content": "Create frontend reports portal structure (ReportsCatalog.jsx + directory)",
+    "status": "completed"
+  },
+  {
+    "content": "Build DailySalesReport.jsx page dengan filters + download",
+    "status": "completed"
+  },
+  {
+    "content": "Build OutletPerformanceReport.jsx page dengan filters + download",
+    "status": "completed"
+  },
+  {
+    "content": "Build FdoHistoryReport.jsx page dengan filters + download",
+    "status": "completed"
+  },
+  {
+    "content": "Integrate Reports into navigation schema",
+    "status": "completed"
+  },
+  {
+    "content": "Test all 3 Excel exports (data accuracy, formatting, download flow)",
     "status": "completed"
   }
 ]
