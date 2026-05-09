@@ -9,6 +9,7 @@ import PettyCashList from "./PettyCashList";
 import UrgentPurchaseList from "./UrgentPurchaseList";
 import KdoPage from "./KdoPage";
 import BdoPage from "./BdoPage";
+import FdoPage from "./FdoPage";
 import DailyClose from "./DailyClose";
 import StockCheck from "./inventory/StockCheck";
 import StockTransfers from "./inventory/StockTransfers";
@@ -29,6 +30,7 @@ export default function OutletPortal() {
       <Route path="petty-cash" element={<PettyCashList />} />
       <Route path="kdo" element={<KdoPage />} />
       <Route path="bdo" element={<BdoPage />} />
+      <Route path="fdo" element={<FdoPage />} />
       <Route path="urgent-purchase" element={<UrgentPurchaseList />} />
       <Route path="daily-close" element={<DailyClose />} />
       <Route path="opname" element={<Navigate to="/inventory/opname" replace />} />

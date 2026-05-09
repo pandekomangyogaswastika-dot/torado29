@@ -166,6 +166,13 @@ async def create_po(payload: dict, *, user: dict) -> dict:
         )
     await audit_log(user_id=user["id"], entity_type="purchase_order",
                     entity_id=doc["id"], action="create")
+    # Hook: update vendor item catalog (best-effort)
+    try:
+        from services import vendor_item_service
+        await vendor_item_service.upsert_from_po(serialize(doc), user_id=user["id"])
+    except Exception as _e:
+        import logging as _log
+        _log.getLogger("aurora.procurement").warning("vendor_item hook from PO failed: %s", _e)
     return serialize(doc)
 
 
@@ -418,4 +425,11 @@ async def post_gr(payload: dict, *, user: dict) -> dict:
     except Exception as e:  # noqa: BLE001
         import logging as _logging
         _logging.getLogger("aurora.procurement").warning("vendor anomaly check failed: %s", e)
+    # Hook: update vendor item catalog with ACTUAL received price (best-effort)
+    try:
+        from services import vendor_item_service
+        await vendor_item_service.upsert_from_gr(serialize(fresh), user_id=user["id"])
+    except Exception as _e:
+        import logging as _logging2
+        _logging2.getLogger("aurora.procurement").warning("vendor_item hook from GR failed: %s", _e)
     return serialize(fresh)

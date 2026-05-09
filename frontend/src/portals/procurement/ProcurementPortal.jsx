@@ -15,6 +15,8 @@ import GRForm from "./GRForm";
 import VendorRecommendPage from "./VendorRecommendPage";
 import RFQList from "./RFQList";
 import RFQDetail, { RFQForm } from "./RFQDetail";
+import PriceIntelligence from "./PriceIntelligence";
+import VendorCatalog from "./VendorCatalog";
 
 export default function ProcurementPortal() {
   const { user } = useAuth();
@@ -25,6 +27,8 @@ export default function ProcurementPortal() {
       <Route path="kanban" element={<KanbanWorkboard />} />
       <Route path="vendor-comparison" element={<VendorComparison />} />
       <Route path="vendor-recommend" element={<VendorRecommendPage />} />
+      <Route path="price-intelligence" element={<PriceIntelligence />} />
+      <Route path="vendor-catalog" element={<VendorCatalog />} />
       <Route path="rfq" element={<RFQList />} />
       <Route path="rfq/new" element={<RFQForm />} />
       <Route path="rfq/:id" element={<RFQDetail />} />

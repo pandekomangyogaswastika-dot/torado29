@@ -1,304 +1,139 @@
-# Plan — Aurora F&B ERP (Torado Group)
-**Last Updated:** May 8, 2026  
-**Current Version:** 0.3.0  
-**Repo:** github.com/pandekomangyogaswastika-dot/torado26  
-**Deployed:** https://finance-phase2-test.preview.emergentagent.com
+# Smart Procurement + Market List Integration — Plan (POC → V1 → Hardening)
+
+## 1) Objectives
+- Implement **Market List** as **quarterly reference price** (benchmark) used in KDO/BDO/FDO item request UX.
+- Implement **Vendor Item Catalog** as **actual vendor price** source, **auto-updated** from **PO creation** and **GR posting**, with **price history**.
+- Add **FDO (Floor Daily Order)** module aligned with KDO/BDO flow.
+- Ensure **unknown items** created from KDO/BDO/FDO become **Market List pending_review** and require **procurement manager+** approval; items must have **category**.
+- Implement **smart PO**: vendor suggestion + **unavailability handling** (redirect / urgent purchase / return to PR pool).
+- Provide **Excel export** matching Torado Market List format exactly.
+- Add **Price Intelligence Dashboard** (reference vs actual, trends, deviations).
 
 ---
 
-## 📝 Session 2 Update (May 8, 2026)
+## 2) Implementation Steps
 
-### ✅ Cashier Loyalty Points Entry System — COMPLETE
-All features implemented and tested (iteration_6.json: Backend 100%, Frontend ~100%):
+### Phase 1 — Core Flow POC (prove end-to-end data lifecycle)
+**Core to prove:** *PR (KDO/BDO/FDO) item selection → Market List reference lookup/auto-create → PO → GR → vendor catalog updated + history → compare vs market reference.*
 
-1. **Backend:**
-   - `GET /api/outlet/loyalty/cashier/lookup` — phone lookup, returns null if not found
-   - `POST /api/outlet/loyalty/cashier/add-points` — award points, auto-create customer, WhatsApp notification (graceful no-op)
-   - `POST /api/loyalty/login-phone` — phone-based login for loyalty portal
-   - Daily Sales: customer_phone field removed, loyalty points DECOUPLED from validation
+**User stories (POC)**
+1. As outlet staff, I can search items with autocomplete and see **quarter reference price** while filling KDO/BDO/FDO.
+2. As outlet staff, when I type a new item not found, it is captured as **pending_review** instead of being lost.
+3. As procurement manager, I can review pending items, assign **category**, and approve them into the master list.
+4. As procurement staff, when I create a PO, the system auto-updates the vendor’s item catalog and tracks price changes.
+5. As receiving staff, when I post GR, the **actual unit cost** updates vendor price and writes to price history.
 
-2. **Frontend:**
-   - `/outlet/loyalty/input-poin` — cashier screen (3-phase: search → confirm → success)
-   - Navigation: Loyalty section with Input Poin Kasir + Voucher Redeem
-   - Loyalty login: Email + Phone HP tabs (phone login redirect fixed via loginByPhone in context)
+**POC steps**
+- Data model POC (backend only):
+  - Create collections + minimal schemas:
+    - `market_list_quarters` (active quarter)
+    - `market_list_prices` (item_id + quarter_id + unit + ref_price)
+    - `vendor_items` (vendor_id + item_id + unit + current_price + availability)
+    - `vendor_item_price_history` (vendor_id + item_id + unit + old/new + source)
+  - Extend `items` with: `ml_status` (active|pending_review), `created_from` (manual|kdo|bdo|fdo), `brand_availability` (optional), enforce **category required on approve**.
+- POC services + hooks:
+  - Market List: `get_active_quarter()`, `get_ref_price(item_id, quarter)`, `set_ref_price()`.
+  - Vendor Catalog: `upsert_vendor_item_from_po()`, `upsert_vendor_item_from_gr()` with history write.
+  - Add hooks in:
+    - `procurement_service.create_po` (after insert) → update `vendor_items` (source=`po`)
+    - `procurement_service.post_gr` (after GR insert) → update `vendor_items` (source=`gr`)
+- POC endpoints (minimal):
+  - `POST /api/market-list/items/resolve` → given text/name+unit return `{item}` or create pending item.
+  - `GET /api/market-list/reference` → item_id(s) → reference price for active quarter.
+  - `GET /api/vendors/{id}/catalog` → vendor_items + last_price.
+- POC script (isolated, python) to validate:
+  - Create quarter → resolve new item from KDO → approve w/ category → set ref price → create PO → post GR → verify vendor_items updated + history.
+- Fix until POC is stable (no overlaps, correct updates, idempotent-ish updates).
 
-3. **WhatsApp:** Ready for Fonnte/Twilio/Meta API key (graceful no-op when not configured)
-
-**Deployed at:** https://finance-phase2-test.preview.emergentagent.com
-
----
-
-## 📝 Session 3 Update (May 8, 2026)
-
-### ✅ Excel Legacy Workflow Analysis (Torado Group) — COMPLETE
-User uploaded and requested analysis of 3 Excel files used by Torado Group. Analysis completed and approved by user.
-
-**Files analyzed:**
-1. Financial Report 2026 (23 sheets)
-2. Market List (Master) 2024–2026 (10 sheets)
-3. Purchasing Report 2026 (10 sheets)
-
-**Key finding:** Aurora is **80–85% compatible** with Excel legacy workflow.
-
-**Documents produced:**
-- `/app/docs/GAP_ANALYSIS_EXCEL_VS_AURORA.md`
-- `/app/docs/EXECUTIVE_SUMMARY_GAP_ANALYSIS_ID.md`
-- `/app/docs/COMPARISON_TABLE.md`
+**Checkpoint:** proceed only if POC script passes reliably.
 
 ---
 
-## 📝 Session 4 Update (May 8, 2026)
+### Phase 2 — V1 App Development (wire into portals)
 
-### ✅ Phase 1 — Finance Migration Readiness — COMPLETE (+ AI Enhancement)
-Berdasarkan gap analysis Excel, Phase 1 ditargetkan untuk mencapai **95% parity vs Excel**. Dalam implementasi, ternyata beberapa komponen sudah ada di codebase; sisanya ditambahkan.
+**User stories (V1)**
+1. As outlet staff, I can create **FDO** requests identical to KDO/BDO with autocomplete + reference price.
+2. As procurement staff, when creating PO I see **suggested vendors** per item based on vendor catalog price.
+3. As procurement staff, if a vendor can’t supply an item, I can choose: **redirect**, **urgent purchase**, or **return to PR pool**.
+4. As procurement manager, I can manage quarterly Market List prices and **export Excel** identical to legacy.
+5. As procurement manager, I can view **vendor vs market** comparisons and price trend signals.
 
-**Phase 1 deliverables:**
-1. ✅ **Manual Journal Entry (JAE)**
-   - Backend endpoint sudah ada: `POST /api/finance/journals/manual`
-   - Frontend form sudah ada: `/finance/manual-journal` (`ManualJournalForm.jsx`)
+**Backend (V1)**
+- Replace/extend existing `item_pricing` usage:
+  - Keep it for compatibility if used elsewhere, but implement the new quarterly market list model as the **source of reference**.
+- Implement routers/services:
+  - `market_list_router`: quarter CRUD (minimal), reference price CRUD, pending items approval.
+  - `vendor_catalog_router`: list vendor items, price history.
+  - `fdo_router`: mirror kdo/bdo endpoints using `kdo_bdo_service.create(...kind='fdo')`.
+- Implement approval gate:
+  - New permission: `procurement.market_list.approve` required to approve pending items.
+  - Validation: approved item must have `category_id`.
 
-2. ✅ **Kontra Bon / AP Aging**
-   - Backend endpoint sudah ada: `GET /api/finance/ap-aging`
-   - Frontend report sudah ada: `/finance/ap-aging` (`APAging.jsx`)
+**Frontend (V1)**
+- FDO pages:
+  - Add `FdoPage.jsx` + list entry in Outlet Portal navigation.
+  - Reuse KDO/BDO form, change source to `fdo`.
+- Market List UI (Inventory/Procurement):
+  - Market List table for active quarter: item, category, ref price, variance vs prev quarter.
+  - Pending Review queue: approve + set category + set reference price.
+- PO Form enhancements:
+  - Use existing `ItemAutocomplete.jsx` and extend to show reference price + best vendor price.
+  - Vendor suggestion panel (per item) from `vendor_items`.
+  - Add unavailability action UI on PO line:
+    - Redirect to alt vendor (split PO)
+    - Create urgent purchase draft
+    - Return line back to PR pool (status marker)
+- Vendor detail enhancements:
+  - Tab: vendor catalog list + price history + compare vs market ref.
 
-3. ✅ **Payment Request (PR) Workflow (Weekly)** — **IMPLEMENTED**
-   - Backend:
-     - Model: `/app/backend/models/payment_request.py`
-     - Service: `/app/backend/services/payment_request_service.py`
-     - Router: `/app/backend/routers/payment_requests.py`
-     - Server include: registered in `/app/backend/server.py`
-   - API endpoints:
-     - `POST /api/finance/payment-requests`
-     - `GET /api/finance/payment-requests`
-     - `GET /api/finance/payment-requests/{id}`
-     - `POST /api/finance/payment-requests/{id}/submit`
-     - `POST /api/finance/payment-requests/{id}/approve`
-     - `POST /api/finance/payment-requests/{id}/reject`
-     - `POST /api/finance/payment-requests/{id}/mark-paid`
-     - `GET /api/finance/payment-requests/helpers/open-ap`
-   - Frontend:
-     - List: `PaymentRequestList.jsx`
-     - Create: `PaymentRequestForm.jsx`
-     - Detail + actions: `PaymentRequestDetail.jsx`
-     - Routes added in `FinancePortal.jsx`
-     - Navigation added in `navigationSchema.js` (Finance → Payments → Payment Requests)
+**Excel export (V1)**
+- Backend endpoint: `GET /api/market-list/export.xlsx?year=YYYY` generating the **exact Torado template**:
+  - Columns per quarter (Q1/Q2/Q3/Q4) + item attributes + flags.
+  - Ensure formatting: column order, headers, number formats, empty cell rules.
 
-4. ✅ **AI Journal Entry Generator (Input Jurnal AI) — IMPLEMENTED (Option A)**
-   - Backend:
-     - Service: `/app/backend/services/ai_journal_generator_service.py`
-     - Endpoint: `POST /api/ai/generate-journal-entry` (added to `/app/backend/routers/ai.py`)
-   - Frontend:
-     - Component: `/app/frontend/src/components/finance/AIJournalGenerator.jsx`
-     - Integrated into Manual JE: `/app/frontend/src/portals/finance/ManualJournalForm.jsx`
-
-**Current migration readiness:** ~**95% → 98%+** (karena AI generator mempercepat input jurnal dan mengurangi error)
-
-**Notes:** Testing komprehensif Phase 1 + AI belum dijalankan (user memilih lanjut development dulu).
+**End of Phase 2:** run one E2E test pass (seed → create FDO → create PO → post GR → check vendor catalog + export).
 
 ---
 
-## ✅ Status Summary (as of May 8, 2026)
+### Phase 3 — Price Intelligence + Hardening
 
-### Completed Sprints / Major Work
-| Sprint / Workstream | Description | Status |
-|--------|-------------|--------|
-| Phase 0–12 | Core ERP: Auth, Outlet, Inventory, Procurement, Finance, HR, Executive, Admin | ✅ Complete |
-| Sprint G | Finance & HR Enhancements: Budget, Tax, Payroll PDF, BPJS | ✅ Complete |
-| Sprint H | CMS Company Profile: Brands, Outlets, News, Menu + Image Upload | ✅ Complete |
-| Sprint I (Task 1) | Navigation Restructuring: 3-tier AppShell → Sidebar → Subnav | ✅ Complete |
-| Sprint I (Task 2) | Careers/Jobs CMS: Admin CRUD + Public CMS-driven listing | ✅ Complete |
-| Additional Modules | Loyalty, Fixed Assets, AR, e-Faktur, e-Bupot, RFQ, CMS Advanced, CRM, Bank Recon, Report Schedules | ✅ In Codebase |
-| UI Enhancement | Loyalty portal redesigned, public CTA, ERP login subtle | ✅ Complete |
-| Excel Legacy Gap Analysis | Compare 3 Torado Excel files vs Aurora models/workflows | ✅ Complete |
-| **Phase 1 (Finance Migration)** | PR Workflow + verify JAE + AP Aging | ✅ Complete |
-| **AI Enhancement** | AI Journal Entry Generator | ✅ Complete |
+**User stories (Phase 3)**
+1. As procurement manager, I can see a dashboard of items where vendor price deviates most from market reference.
+2. As procurement manager, I can see price trend history per vendor-item.
+3. As procurement staff, I get a clear warning when selecting a vendor priced above reference.
+4. As procurement manager, I can identify items with **single-source vendor risk**.
+5. As finance/procurement, I can audit why vendor price changed (PO/GR/manual) via history logs.
 
-### Latest Test Results
-| Report | Backend | Frontend | Notes |
-|--------|---------|----------|------|
-| iteration_3.json | 100% (13/13) | 95% (20/21) | Legacy report from repo |
-| iteration_4.json | — | ✅ Passed | Loyalty UI redesign + public header |
-| iteration_6.json | ✅ Passed | ✅ Passed | Cashier points + phone auth + decouple daily sales |
+**Dashboard**
+- Build `PriceIntelligenceDashboard`:
+  - Top deviations (actual vs reference), trend sparkline, last change source.
+  - Filters: quarter, category, vendor, outlet/brand (optional).
 
----
+**Hardening**
+- Idempotency/safety:
+  - Avoid double history entries on repeated POSTs (e.g., detect same price+date+source).
+- Performance:
+  - Add indexes: (vendor_id,item_id,unit), (quarter_id,item_id).
+- Data correctness:
+  - Ensure category enforcement on approval and on any procurement-side creation.
 
-## 🎯 Updated Objective (Current Focus)
-
-### Phase 2 — Enhancement (Post-Phase 1) — **IN PROGRESS (Approved by user)**
-**Goal:** Menyamakan pengalaman operasional & reporting dengan Excel legacy (Market List multi-periode, report format yang familiar), sekaligus meningkatkan usability.
-
-**Scope Phase 2 (3 fokus):**
-1. **Item Price Versioning** (Market List multi-periode)
-2. **Report Builder + Export Excel (format mirip legacy)**
-3. **Custom Profit & Loss format Torado**
-
-**Non-goals (Phase 2):**
-- Advanced vendor portal / reminders WhatsApp otomatis (Phase 3)
-- Brand-item availability mapping (Phase 3)
+**End of Phase 3:** E2E regression test + export validation vs known Excel sample.
 
 ---
 
-## 🔜 Next Development Queue
-
-### Priority 1 — Phase 2 Enhancements
-
-#### 1) Item Price Versioning (Market List Multi-Periode)
-
-**Problem:** Excel Market List menyimpan harga per periode (Q1/Q2/Q3/Q4), variance, previous price. Saat ini Aurora hanya menyimpan 1 harga aktif.
-
-**Implementation (recommended approach): Separate Collection `item_pricings`**
-- **Backend:**
-  - New model/doc helper: `ItemPricing`
-    - `id`, `item_id`, `vendor_id?`, `unit`, `price`
-    - `effective_from`, `effective_to?`, `is_active`
-    - `notes`, `created_at`, `created_by`
-  - Endpoints:
-    - `POST /api/inventory/items/{item_id}/pricing` — add new price (auto-close previous active)
-    - `GET /api/inventory/items/{item_id}/pricing` — list history
-    - `GET /api/inventory/items/pricing/current` — current prices for list views
-  - Validations:
-    - no overlapping effective periods per item+vendor+unit
-    - price > 0
-
-- **Frontend:**
-  - Inventory Portal → Item Detail: tab **Harga (History)**
-  - Add price modal: effective_from, unit, price, vendor (optional)
-  - Display: current price + price history table + variance
-  - Optional: bulk import (CSV/XLSX) in Phase 2.5
-
-**Acceptance Criteria:**
-- Bisa simpan histori harga per item per periode.
-- Harga aktif otomatis berlaku berdasarkan effective date.
-- UI menampilkan harga aktif + histori.
-
-**Testing:**
-- Add price twice → previous record closed.
-- Retrieve history sorted by effective_from.
+## 3) Next Actions (immediate)
+1. Confirm the **legacy Market List Excel template** specifics (upload sample or confirm exact header + quarter columns naming) for byte-for-byte export parity.
+2. Implement Phase 1 POC backend models + services + python POC script.
+3. Add hooks to `create_po` and `post_gr` to update vendor catalog + history.
+4. Demo POC results (API responses + DB docs) and get approval to proceed to V1 UI wiring.
 
 ---
 
-#### 2) Report Builder + Export Excel (Legacy-Friendly)
-
-**Goal:** Membuat template report yang mirip Excel legacy dan bisa diekspor.
-
-**Backend:**
-- Review existing `ReportBuilder` / `PivotReport` modules.
-- Add export endpoints (CSV/XLSX):
-  - `GET /api/reports/export` (template_id, params)
-- Add template storage if needed:
-  - `report_templates` collection
-
-**Frontend:**
-- Finance Portal → **Custom Reports** (existing route `/finance/report-builder`)
-- Tambahkan:
-  - “Save template” + “Run template”
-  - Export button: CSV/XLSX
-  - Preset templates:
-    - Weekly Payment Summary (mirip Pay Sum)
-    - KB Summary per Vendor
-    - Purchasing Summary
-
-**Acceptance Criteria:**
-- 1–2 template report legacy bisa di-run dan export tanpa manual pivot.
-
-**Testing:**
-- Generate report for a period, export, verify file download.
-
----
-
-#### 3) Custom Profit & Loss Format Torado
-
-**Goal:** Output P&L yang menyerupai layout sheet `PL` (Financial Report) termasuk grouping akun dan subtotal.
-
-**Backend:**
-- Extend `finance_service.profit_loss`:
-  - allow `format=torado`
-  - return grouped sections (Revenue, COGS, OPEX, Other, Net Profit)
-  - optional compare prev
-
-**Frontend:**
-- Finance Portal → Profit & Loss (`/finance/profit-loss`)
-  - Add format selector: Standard | Torado
-  - Display sectioned table with subtotals
-  - Export to XLSX/CSV
-
-**Acceptance Criteria:**
-- P&L Torado format tampil dan konsisten untuk 1 periode.
-
-**Testing:**
-- Ensure totals equal to standard P&L total.
-
----
-
-### Priority 2 — Deferred / Phase 2.5 (Optional)
-1. Bulk import Item Pricing dari Excel Market List (map kolom periode → effective_from/effective_to)
-2. Scheduled reports untuk weekly/monthly finance (email/attachment)
-
----
-
-### Priority 3 — Phase 3 Nice-to-Have
-1. Brand-item availability mapping (flag ALTERO/MDS/RP/GG/BK/E-crew)
-2. Advanced KB: reminders (email/WA), vendor portal view
-
----
-
-## 📋 Development Guidelines
-
-### Architecture
-- Backend: FastAPI + Motor (async MongoDB) — `server.py` includes many routers
-- Frontend: React + Shadcn/UI + Tailwind — 8 portals + public + loyalty
-- DB: MongoDB `aurora_fnb` on localhost:27017
-- Navigation: `navigationSchema.js` drives all sidebar + subnav across all portals
-- Auth: JWT (HS256), `core/security.py` — `current_user` + `require_perm` decorators
-- Envelope: `{success, data, errors, meta}` on all endpoints
-
-### Conventions
-- All API routes must use `/api/` prefix
-- Backend env: `MONGO_URL`, `DB_NAME=aurora_fnb`, `JWT_SECRET`, `UPLOAD_DIR`
-- Frontend env: `REACT_APP_BACKEND_URL` — do NOT modify
-- File uploads: `/app/backend/uploads/` → served at `/uploads/*`
-- Seed: `python3 seed/seed_demo.py` (idempotent)
-
-### Key Files
-| File | Purpose |
-|------|---------|
-| `/app/backend/server.py` | Main app + all router includes |
-| `/app/backend/core/config.py` | Centralized settings |
-| `/app/backend/core/security.py` | JWT + permissions |
-| `/app/frontend/src/App.js` | React router + all routes |
-| `/app/frontend/src/lib/navigationSchema.js` | Nav schema (8 portals) |
-| `/app/frontend/src/components/layout/AppShell.jsx` | Global layout |
-
----
-
-## 📁 Memory Documents
-| Doc | Purpose |
-|-----|---------|
-| `/app/CURRENT_STATUS.md` | Feature completion matrix |
-| `/app/memory/PRD.md` | Full product requirements |
-| `/app/memory/ARCHITECTURE.md` | Technical architecture |
-| `/app/memory/APPROVED_DECISIONS.md` | Product design decisions |
-| `/app/memory/FINANCE_AUDIT_2026Q2.md` | Finance gap analysis |
-| `/app/memory/PERF_AUDIT.md` | Performance audit |
-| `/app/CMS_ADVANCED_ROADMAP.md` | CMS advanced roadmap |
-| `/app/memory/MODULE_ENHANCEMENT_PLAN.md` | Module enhancement plan |
-| `/app/memory/test_credentials.md` | Test login credentials |
-| `/app/AI_DEVELOPMENT_RULES.md` | AI agent development rules |
-| `/app/docs/GAP_ANALYSIS_EXCEL_VS_AURORA.md` | Excel vs Aurora detailed gap analysis |
-| `/app/docs/EXECUTIVE_SUMMARY_GAP_ANALYSIS_ID.md` | Executive summary for management |
-| `/app/docs/COMPARISON_TABLE.md` | Table comparison + priority matrix |
-
----
-
-## ✏️ Changelog
-
-### May 8, 2026
-- Loyalty portal UI redesigned to premium dark glassmorphism
-- Public website header now shows prominent “Torado Rewards” CTA
-- ERP login made subtle/hidden
-- Test report: `iteration_4.json` (frontend verification)
-- Cashier Loyalty Points Entry System complete (phone login + add points + decouple daily sales)
-- ✅ Completed analysis of 3 Torado Excel files; produced gap analysis docs
-- ✅ Phase 1 completed: Payment Request Workflow added; verified Manual JE + AP Aging exist
-- ✅ Added AI Journal Entry Generator (natural language → JE lines) + integrated into Manual JE UI
-- 🔜 User approved to proceed with Phase 2 (Price Versioning, Report Builder, Custom PL)
+## 4) Success Criteria
+- KDO/BDO/FDO item input always resolves to an item: existing or **auto-created pending_review**.
+- Pending items cannot become active without **category_id** and procurement approval.
+- Market List reference price is quarter-based and visible in request UIs.
+- Vendor catalog is updated automatically from PO/GR and maintains a reliable price history.
+- PO unavailability flow supports redirect/urgent/cancel-to-pool without breaking PR/PO/GR states.
+- Excel export matches Torado Market List format closely enough to replace the legacy file in day-to-day use.
+- Price Intelligence dashboard surfaces meaningful deviations and trends with acceptable performance.

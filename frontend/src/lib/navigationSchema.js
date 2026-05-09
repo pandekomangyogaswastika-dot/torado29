@@ -400,6 +400,17 @@ export const NAVIGATION_SCHEMA = {
           { id: "rfq", name: "RFQ History", path: "/procurement/rfq" },
         ],
       },
+      {
+        id: "smart-procurement",
+        name: "Smart Procurement",
+        icon: BarChart3,
+        items: [
+          { id: "price-intelligence", name: "Price Intelligence", path: "/procurement/price-intelligence" },
+          { id: "vendor-catalog", name: "Vendor Item Catalog", path: "/procurement/vendor-catalog" },
+          { id: "vendor-recommend", name: "AI Vendor Recommend", path: "/procurement/vendor-recommend" },
+          { id: "vendor-comparison", name: "Vendor Comparison", path: "/procurement/vendor-comparison" },
+        ],
+      },
     ],
   },
 
@@ -444,6 +455,14 @@ export const NAVIGATION_SCHEMA = {
         icon: ClipboardCheck,
         items: [
           { id: "opname", name: "Start Opname", path: "/inventory/opname" },
+        ],
+      },
+      {
+        id: "market-list",
+        name: "Market List",
+        icon: Star,
+        items: [
+          { id: "market-list", name: "Market List (Harga Acuan)", path: "/inventory/market-list" },
         ],
       },
       {
@@ -492,11 +511,12 @@ export const NAVIGATION_SCHEMA = {
       },
       {
         id: "kitchen",
-        name: "Kitchen Orders",
+        name: "Daily Orders",
         icon: ScrollText,
         items: [
-          { id: "kdo", name: "KDO", path: "/outlet/kdo" },
-          { id: "bdo", name: "BDO", path: "/outlet/bdo" },
+          { id: "kdo", name: "KDO — Kitchen", path: "/outlet/kdo" },
+          { id: "bdo", name: "BDO — Bar", path: "/outlet/bdo" },
+          { id: "fdo", name: "FDO — Floor", path: "/outlet/fdo" },
         ],
       },
       {

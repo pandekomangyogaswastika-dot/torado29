@@ -11,6 +11,7 @@ import OpnameList from "./OpnameList";
 import OpnameSession from "./OpnameSession";
 import Valuation from "./Valuation";
 import LowStockAlert from "./LowStockAlert";
+import MarketListPage from "./MarketListPage";
 
 export default function InventoryPortal() {
   const { user } = useAuth();
@@ -27,6 +28,7 @@ export default function InventoryPortal() {
       <Route path="opname" element={<OpnameList />} />
       <Route path="opname/:id" element={<OpnameSession />} />
       <Route path="valuation" element={<Valuation />} />
+      <Route path="market-list" element={<MarketListPage />} />
     </Routes>
   );
 }

@@ -24,7 +24,7 @@ from core.rate_limiter import limiter as rate_limiter  # noqa: E402
 
 # Routers
 from routers import crm_analytics
-from routers import admin, admin_loyalty, admin_ops, ai, anomalies, approvals, ar, auth, bank_recon, budget, cash, daily_close, daily_sales, efaktur, executive, finance, fixed_asset, forecasting, hr, inventory, item_pricing, kdo_bdo, loyalty, master, notifications, outlet, owner, payments, payment_requests, procurement, reports, rewards, search, system_settings, tax, telegram, uploads, public_content, admin_cms, cms_advanced, report_schedules, rfq, ebupot, user_preferences  # noqa: E402
+from routers import admin, admin_loyalty, admin_ops, ai, anomalies, approvals, ar, auth, bank_recon, budget, cash, daily_close, daily_sales, efaktur, executive, finance, fixed_asset, forecasting, hr, inventory, item_pricing, kdo_bdo, loyalty, master, notifications, outlet, owner, payments, payment_requests, procurement, reports, rewards, search, system_settings, tax, telegram, uploads, public_content, admin_cms, cms_advanced, report_schedules, rfq, ebupot, user_preferences, market_list, vendor_items  # noqa: E402
 
 # Configure structured JSON logging EARLY (before any logger.info calls)
 configure_logging()
@@ -193,6 +193,8 @@ app.include_router(ebupot.router)          # Sprint E: e-Bupot PPh23
 app.include_router(user_preferences.router) # Sprint F: User Preferences + Dashboard Presets
 app.include_router(payment_requests.router) # Fase 1: Payment Request Workflow (Excel Migration)
 app.include_router(item_pricing.router)    # Fase 2: Item Price Versioning (Market List multi-periode)
+app.include_router(market_list.router)     # Smart Procurement: Market List + Quarterly Pricing
+app.include_router(vendor_items.router)    # Smart Procurement: Vendor Item Catalog
 
 # Mount static files for uploaded images
 app.mount("/uploads", StaticFiles(directory="/app/backend/uploads"), name="uploads")

@@ -425,6 +425,7 @@ function KdoBdoForm({ kind, meta, open, userOutlets, onClose, onSaved }) {
             >
               <div className="col-span-12 sm:col-span-7">
                 <ItemAutocomplete
+                  showMarketRef={true}
                   value={ln.name}
                   onChange={(v) => setLine(i, "name", v)}
                   onSelect={(it) => {

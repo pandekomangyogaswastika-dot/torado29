@@ -1,0 +1,22 @@
+[
+  {
+    "content": "Review existing codebase (models, services, routers patterns)",
+    "status": "completed"
+  },
+  {
+    "content": "Phase A: Backend Foundation - Models, Services, Routers (Market List, Vendor Items, FDO, PO/GR hooks)",
+    "status": "completed"
+  },
+  {
+    "content": "Phase B: Core UI - Market List page, Vendor Catalog tab, FDO frontend, Navigation",
+    "status": "completed"
+  },
+  {
+    "content": "Phase C: Intelligence Layer - Smart PO (unavailability flow), KDO/BDO/FDO integration, Price Intelligence",
+    "status": "completed"
+  },
+  {
+    "content": "End-to-end testing of all Smart Procurement features",
+    "status": "in_progress"
+  }
+]

@@ -2,9 +2,11 @@
  *
  *  Phase 9C — shows "Last vendor / unit cost / X days ago" hint
  *  when item has a recent posted Goods Receipt.
+ *
+ *  Smart Procurement — shows Market List reference price hint for KDO/BDO/FDO.
  */
 import { useState, useEffect, useRef } from "react";
-import { Package, Sparkles, Clock, Store } from "lucide-react";
+import { Package, Sparkles, Clock, Store, Tag } from "lucide-react";
 import api, { unwrap } from "@/lib/api";
 import { fmtRp } from "@/lib/format";
 import { Input } from "@/components/ui/input";
@@ -24,10 +26,11 @@ function describeDaysAgo(days) {
 
 export default function ItemAutocomplete({
   value, onChange, onSelect, placeholder = "Cari item…", className,
-  showLastPrice = true, showVendorHint = true, outletId, dataTestId,
+  showLastPrice = true, showVendorHint = true, showMarketRef = false, outletId, dataTestId,
 }) {
   const [query, setQuery] = useState(value || "");
   const [results, setResults] = useState([]);
+  const [refPriceMap, setRefPriceMap] = useState({});
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const ref = useRef(null);
@@ -42,11 +45,20 @@ export default function ItemAutocomplete({
         const params = { q: query, limit: 8 };
         if (outletId) params.outlet_id = outletId;
         const res = await api.get("/ai/items/suggest", { params });
-        setResults(unwrap(res) || []);
+        const items = unwrap(res) || [];
+        setResults(items);
+        // Fetch market ref prices if enabled
+        if (showMarketRef && items.length > 0) {
+          try {
+            const ids = items.map(i => i.id).join(",");
+            const refRes = await api.get(`/market-list/ref-prices/bulk?item_ids=${ids}`);
+            setRefPriceMap(refRes.data.data || {});
+          } catch (_) {}
+        }
       } finally { setLoading(false); }
     }, 200);
     return () => clearTimeout(t);
-  }, [query, open, outletId]);
+  }, [query, open, outletId, showMarketRef]);
 
   useEffect(() => {
     const onClick = (e) => {
@@ -76,6 +88,7 @@ export default function ItemAutocomplete({
             const lastCost = it.last_unit_cost ?? it.last_price ?? null;
             const daysAgoText = describeDaysAgo(it.last_purchase_days_ago);
             const hasHint = showVendorHint && (it.last_vendor_name || lastCost);
+            const refPrice = refPriceMap[it.id];
             return (
               <button
                 type="button"
@@ -101,6 +114,13 @@ export default function ItemAutocomplete({
                       </>
                     )}
                   </div>
+                  {/* Market List Reference Price hint */}
+                  {showMarketRef && refPrice && (
+                    <div className="text-[11px] text-blue-600 dark:text-blue-400 flex items-center gap-1.5 mt-0.5">
+                      <Tag className="h-2.5 w-2.5 shrink-0" />
+                      <span>Ref <b>{refPrice.quarter_label}</b>: <span className="font-semibold">{fmtRp(refPrice.ref_price)}</span>{it.unit ? `/${it.unit}` : ""}</span>
+                    </div>
+                  )}
                   {hasHint && (
                     <div
                       className="text-[11px] text-emerald-700 dark:text-emerald-300/90 flex items-center gap-1.5 mt-0.5"
