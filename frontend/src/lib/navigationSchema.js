@@ -327,9 +327,9 @@ export const NAVIGATION_SCHEMA = {
         name: "Procurement",
         icon: ShoppingCart,
         items: [
-          { id: "po-summary", name: "PO Summary", path: "/reports/po-summary", badge: "Soon" },
-          { id: "gr-summary", name: "GR Summary", path: "/reports/gr-summary", badge: "Soon" },
-          { id: "vendor-perf", name: "Vendor Performance", path: "/reports/vendor-performance", badge: "Soon" },
+          { id: "po-summary", name: "PO Summary", path: "/reports/po-summary" },
+          { id: "gr-summary", name: "GR Summary", path: "/reports/gr-summary" },
+          { id: "vendor-perf", name: "Vendor Performance", path: "/reports/vendor-performance" },
         ],
       },
       {

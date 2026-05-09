@@ -8,6 +8,9 @@ import FdoHistoryReport from "@/portals/reports/FdoHistoryReport";
 import StockBalanceReport from "@/portals/reports/StockBalanceReport";
 import StockMovementReport from "@/portals/reports/StockMovementReport";
 import InventoryValuationReport from "@/portals/reports/InventoryValuationReport";
+import POSummaryReport from "@/portals/reports/POSummaryReport";
+import GRSummaryReport from "@/portals/reports/GRSummaryReport";
+import VendorPerformanceReport from "@/portals/reports/VendorPerformanceReport";
 
 export default function ReportsPortal() {
   const { user } = useAuth();
@@ -22,6 +25,9 @@ export default function ReportsPortal() {
       <Route path="stock-balance" element={<StockBalanceReport />} />
       <Route path="stock-movement" element={<StockMovementReport />} />
       <Route path="inventory-valuation" element={<InventoryValuationReport />} />
+      <Route path="po-summary" element={<POSummaryReport />} />
+      <Route path="gr-summary" element={<GRSummaryReport />} />
+      <Route path="vendor-performance" element={<VendorPerformanceReport />} />
       {/* Coming soon routes will redirect to catalog or show placeholder */}
     </Routes>
   );

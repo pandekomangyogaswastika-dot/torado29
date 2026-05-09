@@ -22,9 +22,10 @@
 - Reuse existing **Report Builder (lite)** where suitable and extend it with Excel export.
 
 **Status update (May 2026):**
-- Phase **4.1 (Sales & Outlet Reports)** is **complete** and **tested**.
-- Phase **4.2 (Inventory Reports)** is now **complete** and **tested**.
-- Next: proceed to **Phase 4.3 (Procurement Reports)**.
+- ✅ Phase **4.1 (Sales & Outlet Reports)** is **complete** and **tested**.
+- ✅ Phase **4.2 (Inventory Reports)** is **complete** and **tested**.
+- ✅ Phase **4.3 (Procurement Reports)** is **complete** and **tested**.
+- Next: proceed to **Phase 4.4 (Finance Reports)**.
 
 ---
 
@@ -169,12 +170,58 @@
 - Excel downloads produced valid `.xlsx` files.
 - Filters verified (date/outlet/category/movement_type) and aggregation works.
 
-#### Phase 4.3 — Procurement Reports (P1) **[NOT STARTED / NEXT]**
-- PO Summary (Excel)
-- GR Summary (Excel)
-- Vendor Performance (Excel) — leverage existing vendor scorecard + Excel formatting
+#### Phase 4.3 — Procurement Reports (P1) **✅ COMPLETED & TESTED**
+**Goal:** Provide procurement operational reporting for PO/GR and vendor performance.
 
-#### Phase 4.4 — Finance Reports (P1) **[NOT STARTED]**
+**Delivered Reports**
+1. **PO Summary (Excel)**
+   - Filters: date range, vendor (multi-select), status
+   - Columns: PO No, PO Date, Vendor, Status, Items Count, Total Amount, Delivery Date
+   - Notes: returns latest **500 POs** (descending), with **status color coding**
+
+2. **GR Summary (Excel)**
+   - Filters: date range, vendor (multi-select)
+   - Columns: GR No, GR Date, PO No, Vendor, Items Count, GR Amount, PO Amount, Variance
+   - Notes: returns latest **500 GRs** (descending); **variance = GR amount − PO amount**
+
+3. **Vendor Performance (Excel)**
+   - Filters: date range, vendor (multi-select)
+   - Columns: Vendor, PO Count, GR Count, Total Purchase Value, Fulfillment Rate
+   - Notes: **fulfillment rate = (GR count / PO count) × 100%**, includes **bar chart** for Total Purchase Value
+
+**Backend (Phase 4.3) — Implemented**
+- Added service generators in `backend/services/reports_service.py`:
+  - `generate_po_summary_excel()`
+  - `generate_gr_summary_excel()`
+  - `generate_vendor_performance_excel()`
+- Added 3 Excel export endpoints (auth-gated via `_REPORT_READ_PERMS`) in `backend/routers/reports.py`:
+  - `GET /api/reports/procurement/po-summary.xlsx`
+  - `GET /api/reports/procurement/gr-summary.xlsx`
+  - `GET /api/reports/procurement/vendor-performance.xlsx`
+
+**Frontend (Phase 4.3) — Implemented**
+- Added Procurement report pages:
+  - `frontend/src/portals/reports/POSummaryReport.jsx`
+  - `frontend/src/portals/reports/GRSummaryReport.jsx`
+  - `frontend/src/portals/reports/VendorPerformanceReport.jsx`
+- Routing integration:
+  - Updated `frontend/src/portals/ReportsPortal.jsx` to include procurement routes
+- Catalog + navigation integration:
+  - Updated `ReportsCatalog.jsx` procurement reports from `coming_soon` → `active`
+  - Updated `navigationSchema.js` to remove `Soon` badges for procurement reports
+
+**Data Sources (Phase 4.3)**
+- `purchase_orders` (PO summaries + vendor aggregation)
+- `goods_receipts` (GR summaries + fulfillment calculation)
+- `vendors` (name lookup)
+
+**Testing (Phase 4.3) — Completed**
+- All 3 endpoints verified via `curl` → **HTTP 200** and correct Excel Content-Type.
+- Excel downloads produced valid `.xlsx` files.
+- Status color coding verified.
+- Variance analysis and fulfillment rate calculations verified.
+
+#### Phase 4.4 — Finance Reports (P1) **[NOT STARTED / NEXT]**
 - Journal Ledger (Excel)
 - Trial Balance (Excel)
 - AP Aging (Excel)
@@ -192,17 +239,21 @@
 1. ✅ Smart Procurement Phase 2 is completed & tested.
 2. ✅ Phase 4.1 Sales & Outlet Excel exports are completed & tested.
 3. ✅ Phase 4.2 Inventory Excel exports are completed & tested.
+4. ✅ Phase 4.3 Procurement Excel exports are completed & tested.
+
+**Total so far:** **9 production-ready Excel reports** (3 Sales/Outlet + 3 Inventory + 3 Procurement).
 
 ### Next (pick next milestone)
-1. Start **Phase 4.3 Procurement Reports (P1)**
-   - Confirm columns/filters for PO Summary, GR Summary, Vendor Performance
+1. Start **Phase 4.4 Finance Reports (P1)**
+   - Confirm columns/filters for Journal Ledger, Trial Balance, AP Aging
    - Implement endpoints + Excel generators using `excel_export_service.py`
    - Add UI pages under Reports Portal + catalog activation
-2. Start **Phase 4.4 Finance Reports (P1)**
-   - Journal Ledger / Trial Balance / AP Aging exports
+2. Start **Phase 4.5 Enhanced Universal Builder (P2)**
+   - Add Excel export to existing Report Builder
+   - (Optional) add “template configs” persisted in DB
 3. Start **Phase 2 Item 3**: **Custom Profit & Loss format Torado** (P0)
 4. Optional hardening:
-   - Add minimal automated smoke tests for the new `/api/reports/*xlsx` endpoints
+   - Add minimal automated smoke tests for `/api/reports/*xlsx` endpoints
    - Improve Excel branding parity (logo/header blocks) once template is finalized
 
 ---
@@ -221,8 +272,9 @@
 ### Report Catalog + Excel Export (updated)
 - ✅ Phase 4.1 Sales/Outlet report catalog and Excel exports are stable, styled, and open cleanly in Excel (2010+).
 - ✅ Phase 4.2 Inventory report catalog and Excel exports are stable, styled, and open cleanly in Excel (2010+).
+- ✅ Phase 4.3 Procurement report catalog and Excel exports are stable, styled, and open cleanly in Excel (2010+).
 - Next:
-  - Procurement/Finance exports implemented with consistent template utilities.
+  - Finance exports implemented with consistent template utilities.
   - Filters are correct and reproducible (saved configs optional later).
   - Template config is maintainable (code-first then DB-backed).
   - Add automated smoke tests for critical export endpoints + basic UI download interaction.

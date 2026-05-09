@@ -1,38 +1,38 @@
 [
   {
-    "content": "Implement Stock Balance Excel export endpoint + service logic",
+    "content": "Implement PO Summary Excel export endpoint + service logic",
     "status": "completed"
   },
   {
-    "content": "Implement Stock Movement Excel export endpoint + service logic",
+    "content": "Implement GR Summary Excel export endpoint + service logic",
     "status": "completed"
   },
   {
-    "content": "Implement Inventory Valuation Excel export endpoint + service logic",
+    "content": "Implement Vendor Performance Excel export endpoint + service logic",
     "status": "completed"
   },
   {
-    "content": "Build StockBalanceReport.jsx page dengan filters + download",
+    "content": "Build POSummaryReport.jsx page dengan filters + download",
     "status": "completed"
   },
   {
-    "content": "Build StockMovementReport.jsx page dengan filters + download",
+    "content": "Build GRSummaryReport.jsx page dengan filters + download",
     "status": "completed"
   },
   {
-    "content": "Build InventoryValuationReport.jsx page dengan filters + download",
+    "content": "Build VendorPerformanceReport.jsx page dengan filters + download",
     "status": "completed"
   },
   {
-    "content": "Update ReportsCatalog.jsx to mark inventory reports as active",
+    "content": "Update ReportsCatalog.jsx to mark procurement reports as active",
     "status": "completed"
   },
   {
-    "content": "Update navigation routes for inventory reports",
+    "content": "Update navigation routes for procurement reports",
     "status": "completed"
   },
   {
-    "content": "Test all 3 Inventory Excel exports",
+    "content": "Test all 3 Procurement Excel exports",
     "status": "completed"
   }
 ]

@@ -336,3 +336,91 @@ async def inventory_valuation_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+
+# ============================================================
+# PROCUREMENT REPORTS (Phase 4.3)
+# ============================================================
+
+@router.get("/procurement/po-summary.xlsx")
+async def po_summary_excel(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    vendor_ids: Optional[str] = None,
+    status: Optional[str] = None,
+    user: dict = Depends(require_any_perm(*_REPORT_READ_PERMS)),
+):
+    """Generate PO Summary Excel report."""
+    v_ids = [s.strip() for s in vendor_ids.split(",") if s.strip()] if vendor_ids else None
+    
+    wb = await reports_service.generate_po_summary_excel(
+        date_from=date_from,
+        date_to=date_to,
+        vendor_ids=v_ids,
+        status=status,
+    )
+    
+    file_bytes = workbook_to_bytes(wb)
+    filename = f"po_summary_{date_from or 'all'}_{date_to or 'all'}.xlsx"
+    
+    return Response(
+        content=file_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/procurement/gr-summary.xlsx")
+async def gr_summary_excel(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    vendor_ids: Optional[str] = None,
+    po_ids: Optional[str] = None,
+    user: dict = Depends(require_any_perm(*_REPORT_READ_PERMS)),
+):
+    """Generate GR Summary Excel report."""
+    v_ids = [s.strip() for s in vendor_ids.split(",") if s.strip()] if vendor_ids else None
+    p_ids = [s.strip() for s in po_ids.split(",") if s.strip()] if po_ids else None
+    
+    wb = await reports_service.generate_gr_summary_excel(
+        date_from=date_from,
+        date_to=date_to,
+        vendor_ids=v_ids,
+        po_ids=p_ids,
+    )
+    
+    file_bytes = workbook_to_bytes(wb)
+    filename = f"gr_summary_{date_from or 'all'}_{date_to or 'all'}.xlsx"
+    
+    return Response(
+        content=file_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/procurement/vendor-performance.xlsx")
+async def vendor_performance_excel(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    vendor_ids: Optional[str] = None,
+    user: dict = Depends(require_any_perm(*_REPORT_READ_PERMS)),
+):
+    """Generate Vendor Performance Excel report."""
+    v_ids = [s.strip() for s in vendor_ids.split(",") if s.strip()] if vendor_ids else None
+    
+    wb = await reports_service.generate_vendor_performance_excel(
+        date_from=date_from,
+        date_to=date_to,
+        vendor_ids=v_ids,
+    )
+    
+    file_bytes = workbook_to_bytes(wb)
+    filename = f"vendor_performance_{date_from or 'all'}_{date_to or 'all'}.xlsx"
+    
+    return Response(
+        content=file_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
