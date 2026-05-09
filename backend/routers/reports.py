@@ -249,3 +249,90 @@ async def fdo_history_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+
+# ============================================================
+# INVENTORY REPORTS (Phase 4.2)
+# ============================================================
+
+@router.get("/inventory/stock-balance.xlsx")
+async def stock_balance_excel(
+    outlet_ids: Optional[str] = None,
+    category_ids: Optional[str] = None,
+    as_of_date: Optional[str] = None,
+    user: dict = Depends(require_any_perm(*_REPORT_READ_PERMS)),
+):
+    """Generate Stock Balance Excel report."""
+    o_ids = [s.strip() for s in outlet_ids.split(",") if s.strip()] if outlet_ids else None
+    c_ids = [s.strip() for s in category_ids.split(",") if s.strip()] if category_ids else None
+    
+    wb = await reports_service.generate_stock_balance_excel(
+        outlet_ids=o_ids,
+        category_ids=c_ids,
+        as_of_date=as_of_date,
+    )
+    
+    file_bytes = workbook_to_bytes(wb)
+    filename = f"stock_balance_{as_of_date or 'current'}.xlsx"
+    
+    return Response(
+        content=file_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/inventory/stock-movement.xlsx")
+async def stock_movement_excel(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    outlet_ids: Optional[str] = None,
+    movement_type: Optional[str] = None,
+    user: dict = Depends(require_any_perm(*_REPORT_READ_PERMS)),
+):
+    """Generate Stock Movement Excel report."""
+    o_ids = [s.strip() for s in outlet_ids.split(",") if s.strip()] if outlet_ids else None
+    
+    wb = await reports_service.generate_stock_movement_excel(
+        date_from=date_from,
+        date_to=date_to,
+        outlet_ids=o_ids,
+        movement_type=movement_type,
+    )
+    
+    file_bytes = workbook_to_bytes(wb)
+    filename = f"stock_movement_{date_from or 'all'}_{date_to or 'all'}.xlsx"
+    
+    return Response(
+        content=file_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/inventory/valuation.xlsx")
+async def inventory_valuation_excel(
+    outlet_ids: Optional[str] = None,
+    category_ids: Optional[str] = None,
+    as_of_date: Optional[str] = None,
+    user: dict = Depends(require_any_perm(*_REPORT_READ_PERMS)),
+):
+    """Generate Inventory Valuation Excel report."""
+    o_ids = [s.strip() for s in outlet_ids.split(",") if s.strip()] if outlet_ids else None
+    c_ids = [s.strip() for s in category_ids.split(",") if s.strip()] if category_ids else None
+    
+    wb = await reports_service.generate_inventory_valuation_excel(
+        outlet_ids=o_ids,
+        category_ids=c_ids,
+        as_of_date=as_of_date,
+    )
+    
+    file_bytes = workbook_to_bytes(wb)
+    filename = f"inventory_valuation_{as_of_date or 'current'}.xlsx"
+    
+    return Response(
+        content=file_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

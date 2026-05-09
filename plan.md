@@ -21,7 +21,10 @@
 - Provide **advanced filters** (date range + multi-select outlet/brand/vendor/category/status as applicable).
 - Reuse existing **Report Builder (lite)** where suitable and extend it with Excel export.
 
-**Status update (May 2026):** Phase 4.1 (Sales & Outlet Reports) is **complete** and **tested** (backend Excel utilities + 3 export endpoints + Reports Portal UI). Ready to proceed to Phase 4.2.
+**Status update (May 2026):**
+- Phase **4.1 (Sales & Outlet Reports)** is **complete** and **tested**.
+- Phase **4.2 (Inventory Reports)** is now **complete** and **tested**.
+- Next: proceed to **Phase 4.3 (Procurement Reports)**.
 
 ---
 
@@ -116,12 +119,57 @@
 - Excel downloads produced valid `.xlsx` files.
 - Reports Catalog UI verified renders correctly.
 
-#### Phase 4.2 — Inventory Reports (P0) **[NOT STARTED / NEXT]**
-- Stock Balance (Excel)
-- Stock Movement (Excel)
-- Inventory Valuation (Excel)
+#### Phase 4.2 — Inventory Reports (P0) **✅ COMPLETED & TESTED**
+**Goal:** Add inventory operational reports with consistent Excel template utilities.
 
-#### Phase 4.3 — Procurement Reports (P1) **[NOT STARTED]**
+**Delivered Reports**
+1. **Stock Balance (Excel)**
+   - Filters: as_of_date, outlet (multi-select), category (multi-select)
+   - Columns: item_code, item_name, category, outlet, unit, qty, unit_cost, total_value
+   - Notes: stock computed by aggregating `inventory_movements.qty_change` up to `as_of_date`
+
+2. **Stock Movement (Excel)**
+   - Filters: date range, outlet (multi-select), movement_type
+   - Columns: date, doc_no, type, item, outlet, unit, qty_change, remarks
+   - Notes: returns latest **500 movements** (descending)
+
+3. **Inventory Valuation (Excel)**
+   - Filters: as_of_date, outlet (multi-select), category (multi-select)
+   - Columns: category, items_count, total_qty, total_value
+   - Notes: grouped by category using item unit_cost
+
+**Backend (Phase 4.2) — Implemented**
+- Added service generators in `backend/services/reports_service.py`:
+  - `generate_stock_balance_excel()`
+  - `generate_stock_movement_excel()`
+  - `generate_inventory_valuation_excel()`
+- Added 3 Excel export endpoints (auth-gated via `_REPORT_READ_PERMS`) in `backend/routers/reports.py`:
+  - `GET /api/reports/inventory/stock-balance.xlsx`
+  - `GET /api/reports/inventory/stock-movement.xlsx`
+  - `GET /api/reports/inventory/valuation.xlsx`
+
+**Frontend (Phase 4.2) — Implemented**
+- Added Inventory report pages:
+  - `frontend/src/portals/reports/StockBalanceReport.jsx`
+  - `frontend/src/portals/reports/StockMovementReport.jsx`
+  - `frontend/src/portals/reports/InventoryValuationReport.jsx`
+- Routing integration:
+  - Updated `frontend/src/portals/ReportsPortal.jsx` to include inventory routes
+- Catalog + navigation integration:
+  - Updated `ReportsCatalog.jsx` inventory reports from `coming_soon` → `active`
+  - Updated `navigationSchema.js` to remove `Soon` badges for inventory reports
+
+**Data Sources (Phase 4.2)**
+- `inventory_movements` (aggregation over `qty_change`)
+- `items` (name, code, category_id, unit_cost/cost)
+- `outlets`, `categories` (lookup)
+
+**Testing (Phase 4.2) — Completed**
+- All 3 endpoints verified via `curl` → **HTTP 200** and correct Excel Content-Type.
+- Excel downloads produced valid `.xlsx` files.
+- Filters verified (date/outlet/category/movement_type) and aggregation works.
+
+#### Phase 4.3 — Procurement Reports (P1) **[NOT STARTED / NEXT]**
 - PO Summary (Excel)
 - GR Summary (Excel)
 - Vendor Performance (Excel) — leverage existing vendor scorecard + Excel formatting
@@ -143,14 +191,17 @@
 ### Completed
 1. ✅ Smart Procurement Phase 2 is completed & tested.
 2. ✅ Phase 4.1 Sales & Outlet Excel exports are completed & tested.
+3. ✅ Phase 4.2 Inventory Excel exports are completed & tested.
 
 ### Next (pick next milestone)
-1. Start **Phase 4.2 Inventory Reports (P0)**
-   - Decide exact columns/filters per report (stock balance, movement, valuation)
-   - Implement endpoints + Excel generator functions using `excel_export_service.py`
-   - Add UI pages under Reports Portal
-2. Or start **Phase 2 Item 3**: **Custom Profit & Loss format Torado** (P0)
-3. Optional hardening:
+1. Start **Phase 4.3 Procurement Reports (P1)**
+   - Confirm columns/filters for PO Summary, GR Summary, Vendor Performance
+   - Implement endpoints + Excel generators using `excel_export_service.py`
+   - Add UI pages under Reports Portal + catalog activation
+2. Start **Phase 4.4 Finance Reports (P1)**
+   - Journal Ledger / Trial Balance / AP Aging exports
+3. Start **Phase 2 Item 3**: **Custom Profit & Loss format Torado** (P0)
+4. Optional hardening:
    - Add minimal automated smoke tests for the new `/api/reports/*xlsx` endpoints
    - Improve Excel branding parity (logo/header blocks) once template is finalized
 
@@ -169,8 +220,9 @@
 
 ### Report Catalog + Excel Export (updated)
 - ✅ Phase 4.1 Sales/Outlet report catalog and Excel exports are stable, styled, and open cleanly in Excel (2010+).
+- ✅ Phase 4.2 Inventory report catalog and Excel exports are stable, styled, and open cleanly in Excel (2010+).
 - Next:
-  - Inventory/Procurement/Finance exports implemented with consistent template utilities.
+  - Procurement/Finance exports implemented with consistent template utilities.
   - Filters are correct and reproducible (saved configs optional later).
   - Template config is maintainable (code-first then DB-backed).
   - Add automated smoke tests for critical export endpoints + basic UI download interaction.

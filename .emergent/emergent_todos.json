@@ -1,42 +1,38 @@
 [
   {
-    "content": "Create backend excel_export_service.py dengan core utilities (workbook, styles, formatting)",
+    "content": "Implement Stock Balance Excel export endpoint + service logic",
     "status": "completed"
   },
   {
-    "content": "Implement Daily Sales Summary Excel export endpoint + service logic",
+    "content": "Implement Stock Movement Excel export endpoint + service logic",
     "status": "completed"
   },
   {
-    "content": "Implement Outlet Performance Excel export endpoint + service logic",
+    "content": "Implement Inventory Valuation Excel export endpoint + service logic",
     "status": "completed"
   },
   {
-    "content": "Implement FDO History Excel export endpoint + service logic",
+    "content": "Build StockBalanceReport.jsx page dengan filters + download",
     "status": "completed"
   },
   {
-    "content": "Create frontend reports portal structure (ReportsCatalog.jsx + directory)",
+    "content": "Build StockMovementReport.jsx page dengan filters + download",
     "status": "completed"
   },
   {
-    "content": "Build DailySalesReport.jsx page dengan filters + download",
+    "content": "Build InventoryValuationReport.jsx page dengan filters + download",
     "status": "completed"
   },
   {
-    "content": "Build OutletPerformanceReport.jsx page dengan filters + download",
+    "content": "Update ReportsCatalog.jsx to mark inventory reports as active",
     "status": "completed"
   },
   {
-    "content": "Build FdoHistoryReport.jsx page dengan filters + download",
+    "content": "Update navigation routes for inventory reports",
     "status": "completed"
   },
   {
-    "content": "Integrate Reports into navigation schema",
-    "status": "completed"
-  },
-  {
-    "content": "Test all 3 Excel exports (data accuracy, formatting, download flow)",
+    "content": "Test all 3 Inventory Excel exports",
     "status": "completed"
   }
 ]

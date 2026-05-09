@@ -317,9 +317,9 @@ export const NAVIGATION_SCHEMA = {
         name: "Inventory",
         icon: Package,
         items: [
-          { id: "stock-balance", name: "Stock Balance", path: "/reports/stock-balance", badge: "Soon" },
-          { id: "stock-movement", name: "Stock Movement", path: "/reports/stock-movement", badge: "Soon" },
-          { id: "inventory-valuation", name: "Inventory Valuation", path: "/reports/inventory-valuation", badge: "Soon" },
+          { id: "stock-balance", name: "Stock Balance", path: "/reports/stock-balance" },
+          { id: "stock-movement", name: "Stock Movement", path: "/reports/stock-movement" },
+          { id: "inventory-valuation", name: "Inventory Valuation", path: "/reports/inventory-valuation" },
         ],
       },
       {
